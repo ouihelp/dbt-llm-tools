@@ -1,0 +1,8 @@
+name: dbtrag
+description: DBT Rag Deployment - use llm to query your dbt documentation
+runtime:
+  name: python
+  options:
+    virtualenv: venv
+backend:
+    url: s3://dbtrag-pulumi-state-backend

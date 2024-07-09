@@ -1,0 +1,30 @@
+#!/bin/bash
+
+APP_NAME="{{ app_name }}"  # Name of your Flask application
+APP_DIR="/home/ubuntu/$APP_NAME"  # Directory to deploy the app
+
+################
+# REQUIREMENTS #
+################
+cd $APP_DIR
+
+make poetry
+make install
+
+
+############
+# ENV VARS #
+############
+
+cat << EOF2 | tee $APP_DIR/.env
+JWT_SECRET_KEY={{ jwt_secret_key }}
+EOF2
+
+
+###################
+# Restart service #
+###################
+sudo service $APP_NAME restart
+
+
+echo "Flask application '$APP_NAME' deployed successfully!"

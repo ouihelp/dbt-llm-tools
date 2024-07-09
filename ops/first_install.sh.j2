@@ -1,0 +1,222 @@
+Content-Type: multipart/mixed; boundary="//"
+MIME-Version: 1.0
+
+--//
+Content-Type: text/cloud-config; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: attachment; filename="cloud-config.txt"
+
+#cloud-config
+cloud_final_modules:
+- [scripts-user, always]
+
+--//
+Content-Type: text/x-shellscript; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: attachment; filename="userdata.txt"
+
+#!/bin/bash
+
+# This structure has been inspired by
+# https://repost.aws/fr/knowledge-center/execute-user-data-ec2
+
+
+#############
+# VARIABLES #
+#############
+
+APP_NAME="{{ app_name }}"  # Name of your application
+APP_DIR="/home/ubuntu/$APP_NAME"  # Directory to deploy the app
+NGINX_CONF_DIR="/etc/nginx/conf.d"  # Directory for Nginx configuration files
+CERT_CHALLENGE_DIR="/var/www/letsencrypt"  # Directory used by certbot for its challenge
+SSL_CERT_DIR="/etc/letsencrypt/live"  # Directory with generated SSL certificates
+SERVER_DOMAIN="{{ dbtrag_rnd_domain }}"
+SSL_CERT_FILE="$SSL_CERT_DIR/$SERVER_DOMAIN/fullchain.pem"  # Path to your SSL certificate file
+SSL_KEY_FILE="$SSL_CERT_DIR/$SERVER_DOMAIN/privkey.pem"  # Path to your SSL key file
+
+
+############
+# SSH KEYS #
+############
+
+echo "{{ etienne_ssh_key }}" > /home/ubuntu/.ssh/authorized_keys
+
+
+####################
+# INSTALL PACKAGES #
+####################
+
+# Update package lists
+sudo apt update
+
+# For security reason we need to ensure we have the latest version of openssh (CVE-2024-6387)
+sudo apt upgrade -y openssh-server openssh-client
+
+# Install dependencies
+sudo apt install -y rsync python3 python3-pip python3-dev libpq-dev git nginx certbot python3-venv postgresql-client-common postgresql-client tmux vim nano
+
+
+####################
+# HISTORY SHORTCUT #
+####################
+
+cat << EOF | sudo tee /home/ubuntu/.inputrc
+"\e[A": history-search-backward
+"\e[B": history-search-forward
+set show-all-if-ambiguous on
+set completion-ignore-case on
+EOF
+
+
+#######################
+# VIRTUAL ENVIRONMENT #
+#######################
+# Create a virtual environment (idempotent with --upgrade)
+mkdir -p $APP_DIR
+sudo chown -R ubuntu:ubuntu $APP_DIR
+python3 -m venv $APP_DIR/venv
+chmod -R 777 $APP_DIR/venv
+
+
+###################
+# SYSTEMD SERVICE #
+###################
+
+sudo usermod -a -G www-data ubuntu
+
+# Create a systemd service file (idempotent with --Delete)
+sudo systemctl daemon-reload
+sudo systemctl --Delete $APP_NAME.service 2>/dev/null  # Remove existing service if any
+
+cat << EOF | sudo tee /etc/systemd/system/$APP_NAME.service
+[Unit]
+Description=$APP_NAME Application
+After=network.target
+
+[Service]
+User=ubuntu
+Group=www-data
+WorkingDirectory=$APP_DIR
+Environment="PATH=/home/ubuntu/.local/bin:$PATH"
+ExecStart=make run_client
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Reload systemd and enable the service
+sudo systemctl daemon-reload
+sudo systemctl enable $APP_NAME.service
+
+
+#########
+# NGINX #
+#########
+
+# Disabled default param
+sudo rm -f /etc/nginx/sites-enabled/default
+
+cat << EOF | sudo tee $NGINX_CONF_DIR/$APP_NAME-http.conf
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+
+    server_name {{ dbtrag_rnd_domain }};
+
+    access_log /var/log/nginx/{{ app_name }}-http-access.log;
+    error_log /var/log/nginx/{{ app_name }}-http-error.log info;
+
+    location /.well-known/acme-challenge {
+        root $CERT_CHALLENGE_DIR;
+        try_files \$uri \$uri/ =404;
+    }
+
+    location / {
+        rewrite ^ https://{{ dbtrag_rnd_domain }}\$request_uri? permanent;
+    }
+}
+EOF
+
+sudo nginx -t  # Test configuration
+sudo systemctl reload nginx
+
+# Create certbot directory with right permissions
+mkdir -p $CERT_CHALLENGE_DIR
+sudo chown -R ubuntu:www-data $CERT_CHALLENGE_DIR
+sudo chmod -R 755 $CERT_CHALLENGE_DIR
+
+# Obtain or renew Let's Encrypt SSL certificate (optional, adjust accordingly)
+sudo certbot certonly -n --webroot -w $CERT_CHALLENGE_DIR -m {{ letsencrypt_email }} --agree-tos -d {{ dbtrag_rnd_domain }}
+
+cat << EOF | sudo tee $NGINX_CONF_DIR/$APP_NAME-https.conf
+server {
+    listen 443 ssl deferred;
+    listen [::]:443 ssl deferred;
+
+    server_name {{ dbtrag_rnd_domain }};
+
+    access_log /var/log/nginx/{{ app_name }}-access.log;
+    error_log /var/log/nginx/{{ app_name }}-error.log info;
+
+    ssl on;
+    ssl_certificate $SSL_CERT_FILE;
+    ssl_certificate_key $SSL_KEY_FILE;
+    ssl_trusted_certificate $SSL_CERT_FILE;
+
+    ssl_session_cache shared:SSL:50m;
+    ssl_session_timeout 5m;
+    ssl_stapling on;
+    ssl_stapling_verify on;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    proxy_connect_timeout   {{ timeout_in_seconds }};
+    proxy_send_timeout      {{ timeout_in_seconds }};
+    proxy_read_timeout      {{ timeout_in_seconds }};
+    send_timeout            {{ timeout_in_seconds }};
+
+    location / {
+        proxy_pass http://127.0.0.1:8501;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+
+    location /_stcore/stream {
+        proxy_pass http://127.0.0.1:8501/_stcore/stream;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 86400;
+    }
+}
+EOF
+
+# Enable the new Nginx configuration and reload
+sudo nginx -t  # Test configuration
+sudo systemctl reload nginx
+
+
+#####################
+# DEPLOYMENT SCRIPT #
+#####################
+
+cat << EOF | tee /home/ubuntu/{{ deploy_app_script_name }}
+{{ deploy_app_script }}
+EOF
+chmod +x /home/ubuntu/{{ deploy_app_script_name }}
+
+#######
+# END #
+#######
+
+echo "Application '$APP_NAME' installed successfully!"
+--//--
