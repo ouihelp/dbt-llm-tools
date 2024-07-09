@@ -10,6 +10,11 @@ from dbt_llm_tools import DbtProject
 
 st.set_page_config(page_title="dbt-llm-tools", page_icon="🤖", layout="wide")
 
+from nigol_authentication import nigol_authenticator
+# must be logged-in to access this page
+if not nigol_authenticator.login():
+    exit()
+
 db = TinyDB(st.session_state.get("local_db_path", ".local_storage/db.json"))
 
 st.title("Welcome to dbt-llm-tools 👋")

@@ -32,7 +32,7 @@ class Chatbot:
         database_path: str = ".local_storage/db.json",
         vector_db_path: str = ".local_storage/chroma.db",
         embedding_model: str = "text-embedding-3-large",
-        chatbot_model: str = "gpt-4o",
+        chatbot_model: str = "gpt-4-turbo",
     ) -> None:
         """
         Initializes a chatbot object along with a default set of instructions.

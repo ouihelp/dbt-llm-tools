@@ -37,4 +37,7 @@ question.
 
 You should also refrain from providing any information that is not directly related to the user's question or that
 which cannot be inferred from the information you have been given.
+
+All table names must be prefixed by their namespace which is "oh_analytics".
+For example : "SELECT * FROM oh_analytics.proclients".
 """

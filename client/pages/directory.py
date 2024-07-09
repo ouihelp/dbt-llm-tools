@@ -2,8 +2,13 @@ import streamlit as st
 from tinydb import TinyDB, Query
 
 from menu import menu
+from nigol_authentication import nigol_authenticator
 
 st.set_page_config(page_title="DBT Project Directory", page_icon="🔍", layout="wide")
+
+# must be logged-in to access this page
+if not nigol_authenticator.login():
+    exit()
 
 menu()
 
