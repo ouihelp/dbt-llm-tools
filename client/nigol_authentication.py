@@ -133,6 +133,8 @@ class NigolAuthenticator:
                 """
 
                 st.markdown("""
+                # Un login en quatre étapes
+                
                 Désolé pour ce login un peu complexe, il faudra créer un custom 
                 component Streamlit pour simplifier le processus.
                 """)
