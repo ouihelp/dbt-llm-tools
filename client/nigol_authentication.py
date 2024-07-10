@@ -23,7 +23,7 @@ SECRET_KEY = os.environ['JWT_SECRET_KEY']
 class NigolAuthenticator:
     def __init__(self,
                  token_key: str = "access",
-                 cookie_lifetime: timedelta = timedelta(minutes=15)
+                 cookie_lifetime: timedelta = timedelta(days=7)
                  ):
         """
         Initializes the Authenticator instance with the specified parameters.
