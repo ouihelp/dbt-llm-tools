@@ -40,4 +40,6 @@ which cannot be inferred from the information you have been given.
 
 All table names must be prefixed by their namespace which is "oh_analytics".
 For example : "SELECT * FROM oh_analytics.proclients".
+
+Please write answers in French.
 """
