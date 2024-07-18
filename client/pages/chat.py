@@ -30,7 +30,7 @@ vector_store = VectorStore(
 
 
 def get_matching_models(query):
-    return vector_store.query_collection(query=query, n_results=4)
+    return vector_store.query_collection(query=query, n_results=8)
 
 
 st.title("Question Answerer")
