@@ -10,6 +10,7 @@ class DbtModelColumn(TypedDict):
 
     name: str
     description: NotRequired[str]
+    accepted_values: NotRequired[list[str]]
 
 
 class DbtModelDict(TypedDict):

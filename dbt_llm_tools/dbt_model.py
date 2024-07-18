@@ -34,7 +34,11 @@ class DbtModel:
         raw_columns = filter(lambda x: "name" in x, documentation.get("columns", []))
         self.columns = list(
             map(
-                lambda x: {"name": x.get("name"), "description": x.get("description")},
+                lambda x: {
+                    "name": x.get("name"),
+                    "description": x.get("description"),
+                    "accepted_values": get_accepted_values(x),
+                },
                 raw_columns,
             )
         )
@@ -62,9 +66,12 @@ class DbtModel:
             model_text += "\nThis table contains the following columns:\n"
 
             for col in self.columns:
+                accepted_values_text = f" Accepted values: {col['accepted_values']}"\
+                    if col['accepted_values'] else ""
                 model_text += "\n"
                 model_text += (
                     f"- { col['name'] }: { col.get('description', 'No description')}"
+                    f"{accepted_values_text}"
                 )
 
         return model_text
@@ -102,3 +109,14 @@ class DbtModel:
             return self.__print_model_doc()
 
         return template_function(self.as_dict())
+
+
+def get_accepted_values(column: dict) -> list[str]:
+    if 'tests' not in column:
+        return []
+
+    for test in column['tests']:
+        if 'accepted_values' in test:
+            return test['accepted_values']['values']
+
+    return []
