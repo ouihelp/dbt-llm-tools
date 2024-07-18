@@ -284,7 +284,7 @@ dbt_project_root = '../../hourtin2/dbt_project_bi'
 # exclude this directory (ops) and other files/directories excluded by .gitignore
 dbt_rsync_command = pulumi.Output.concat(
         "rsync -e 'ssh -o StrictHostKeyChecking=no' -rz --stats "
-        "--exclude='dbt_packages' --exclude='logs' --exclude='.github' --exclude='target' "
+        "--exclude='dbt_packages' --exclude='logs' --exclude='.github' "
         "--exclude='tests' ", dbt_project_root, " ubuntu@",
         dbtrag_rnd_domain, ":~"
 )

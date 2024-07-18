@@ -180,6 +180,11 @@ class DbtProject:
         return models, sources
 
     def __parse_manifest(self):
+        # check if manifest file exists
+        if not os.path.isfile(self.__manifest_file):
+            print('WARNING: Manifest file not found. Run dbt command to generate it.')
+            return {}
+
         with open(self.__manifest_file, encoding="utf-8") as f:
             return json.load(f)
 
