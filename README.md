@@ -16,6 +16,7 @@ Folder paths to exclude
 /models/marts/bill/intermediate
 /models/marts/core/intermediate
 /models/marts/marketing/intermediate
+/models/marts/marketmap/intermediate
 /models/marts/ops/intermediate
 /models/marts/partners/intermediate
 /models/marts/sales/intermediate
