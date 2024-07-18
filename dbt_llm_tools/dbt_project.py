@@ -52,6 +52,8 @@ class DbtProject:
 
         self.__sql_files = self.__get_all_files("sql")
         self.__yaml_files = self.__get_all_files("yml")
+        self.__manifest_file = os.path.join(dbt_project_root, "target/manifest.json")
+        self.__project_name = os.path.basename(dbt_project_root)
 
     def __get_all_files(self, file_extension: str):
         """
@@ -177,6 +179,10 @@ class DbtProject:
 
         return models, sources
 
+    def __parse_manifest(self):
+        with open(self.__manifest_file, encoding="utf-8") as f:
+            return json.load(f)
+
     def __get_directory(self):
         """
         Get the parsed directory from the directory file.
@@ -223,8 +229,20 @@ class DbtProject:
             self.__yaml_files
         )
 
+        manifest = self.__parse_manifest()
         for model_name, model_dict in documented_models.items():
             yaml_path = model_dict.pop("yaml_path")
+
+            # Replace the column descriptions with the ones from the manifest
+            manifest_columns = manifest.get("nodes", {})\
+                .get(f"model.{self.__project_name}.{model_name}", {})\
+                .get("columns", {})
+            for column in model_dict.get("columns", []):
+                if column['name'] in manifest_columns:
+                    if not manifest_columns[column['name']]['description']:
+                        continue
+
+                    column['description'] = manifest_columns[column['name']]['description']
 
             if model_name in source_sql_models:
                 source_sql_models[model_name]["yaml_path"] = yaml_path
