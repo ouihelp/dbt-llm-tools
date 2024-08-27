@@ -9,6 +9,15 @@ dbt-llm-tools, also known as ragstar, provides a suite of tools powered by Large
 https://www.loom.com/share/abb0612c4e884d4cb8fabc22af964e7e?sid=f5f8c0e6-51f5-4afc-a7bf-51e9e182c2e7
 
 ### Ouihelp doc
+Update dbt manifest:
+```
+dbt compile
+```
+
+DBT project root:
+```
+/home/ubuntu/dbt_project_bi
+```
 
 Folder paths to exclude
 ```
