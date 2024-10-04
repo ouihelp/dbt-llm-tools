@@ -8,18 +8,26 @@ dbt-llm-tools, also known as ragstar, provides a suite of tools powered by Large
 
 https://www.loom.com/share/abb0612c4e884d4cb8fabc22af964e7e?sid=f5f8c0e6-51f5-4afc-a7bf-51e9e182c2e7
 
-### Ouihelp doc
-Update dbt manifest:
+# Ouihelp doc
+### Steps to update doc in prod
+Update dbt manifest in your local:
 ```
-dbt compile
+dbt compile  # in hourtin2, which should be in the same folder as this repo
 ```
 
-DBT project root:
+Re-deploy:
+```
+pulumi up
+```
+
+Go to the dbtrag url : https://dbtrag.rnd.ouihelp.fr/.
+
+Fill the openai key and DBT project root and "Parse project":
 ```
 /home/ubuntu/dbt_project_bi
 ```
 
-Folder paths to exclude
+In section "Vector store to chatbot", fill the folder paths to exclude
 ```
 /models/staging
 /models/marts/bill/intermediate
@@ -30,7 +38,22 @@ Folder paths to exclude
 /models/marts/partners/intermediate
 /models/marts/sales/intermediate
 /models/marts/utils/intermediate
+/models/marts/rh/intermediate
 ```
+
+Then "Preview", "Clear vector store" and "Load to vector Store".
+
+Then go to "Chatbot" section.
+
+### Steps to deploy in local
+Follow the "Getting started" in the "Official doc" instructions below.
+Then fill the openai key and DBT project root:
+```
+/Users/etiennecallies/hourtin2/dbt_project_bi  # replace with your path
+```
+Then follow the "Steps to update doc in prod" instructions.
+
+# Official doc
 
 ### Key functionalities
 
